@@ -46,4 +46,39 @@ mod tests {
             assert!(value > 0 && value < 7);
         }
     }
+
+    #[test]
+    fn test_math() {
+
+        let value = parce_dice_string("1d1+2");
+        assert_eq!(value, 3);
+    }
+
+    #[test]
+    fn test_math_1() {
+
+        let value = parce_dice_string("1d1 + 2");
+        assert_eq!(value, 3);
+    }
+
+    #[test]
+    fn test_math_2() {
+
+        let value = parce_dice_string("1d1 - 1d1 + 2");
+        assert_eq!(value, 2);
+    }
+
+    #[test]
+    fn test_math_3() {
+
+        let value = parce_dice_string("3 + 1d1 * 2");
+        assert_eq!(value, 5);
+    }
+
+    #[test]
+    fn test_math_4() {
+
+        let value = parce_dice_string("(3 + 1d1) * 2");
+        assert_eq!(value, 8);
+    }
 }
