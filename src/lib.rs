@@ -4,6 +4,7 @@ use rand::Rng;
 use regex::Captures;
 use regex::Regex;
 use itertools::Itertools;
+use std::collections::HashMap;
 
 fn roll_dice(num_dice: usize, size_dice: usize) -> usize {
     let mut rng = rand::thread_rng();
@@ -35,7 +36,7 @@ pub fn parce_dice_string(string: &str) -> i64 {
     result.trunc() as i64
 }
 
-pub struct RollInfo {
+struct RollInfo {
     pub num: i64,
     pub size: i64,
 }
@@ -75,7 +76,7 @@ fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
     (result, roll_infos)
 }
 
-pub fn dice_distribtion(string: &str) -> Vec<i64> {
+pub fn possible_rolls(string: &str) -> Vec<i64> {
     let (format_string, roll_infos) = extract_dice_values(string);
     let roll_numbers: Vec<i64> = roll_infos
         .iter()
@@ -85,12 +86,25 @@ pub fn dice_distribtion(string: &str) -> Vec<i64> {
         .collect();
 
     roll_numbers
+}
 
-    // let mut roll_distribution = HashMap::new();
-    // for roll in roll_numbers {
-    //     roll_distribution.entry(roll).and_modify(|e| *e += 1).or_insert(1);
-    // }
-    // println!("{:#?}", roll_distribution);
+pub fn roll_distribution(roll_numbers: Vec<i64>) -> HashMap<i64, i64> {
+    let mut roll_distribution = HashMap::new();
+    for roll in roll_numbers {
+        roll_distribution.entry(roll).and_modify(|e| *e += 1).or_insert(1);
+    }
+
+    roll_distribution
+}
+
+pub fn distribution_table(distribution: HashMap<i64, i64>) -> String {
+    
+    let mut tuples = Vec::new();
+
+    for (roll, num_rolled) in distribution {
+        tuples.push((roll, num_rolled));
+    }
+    tuples.sort_by(|a, b| a.0.cmp(&b.0));
 }
 
 fn format_dice_string(dice_string: &str, rolls: Vec<i64>) -> String {
