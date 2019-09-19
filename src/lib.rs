@@ -1,9 +1,9 @@
 extern crate meval;
 extern crate regex;
+use itertools::Itertools;
 use rand::Rng;
 use regex::Captures;
 use regex::Regex;
-use itertools::Itertools;
 
 fn roll_dice(num_dice: usize, size_dice: usize) -> usize {
     let mut rng = rand::thread_rng();
@@ -98,7 +98,9 @@ fn format_dice_string(dice_string: &str, rolls: Vec<i64>) -> String {
     let mut new_string = dice_string.to_string();
 
     for roll in rolls {
-        new_string = re.replace(new_string.as_str(), roll.to_string().as_str()).to_string();
+        new_string = re
+            .replace(new_string.as_str(), roll.to_string().as_str())
+            .to_string();
     }
     new_string
 }
@@ -109,7 +111,6 @@ mod tests {
 
     #[test]
     fn test_parce_dice_string() {
-        
         for _ in 0..100 {
             let value = parce_dice_string("1d6");
             assert!(value > 0 && value < 7);
@@ -118,35 +119,30 @@ mod tests {
 
     #[test]
     fn test_math() {
-
         let value = parce_dice_string("1d1+2");
         assert_eq!(value, 3);
     }
 
     #[test]
     fn test_math_1() {
-
         let value = parce_dice_string("1d1 + 2");
         assert_eq!(value, 3);
     }
 
     #[test]
     fn test_math_2() {
-
         let value = parce_dice_string("1d1 - 1d1 + 2");
         assert_eq!(value, 2);
     }
 
     #[test]
     fn test_math_3() {
-
         let value = parce_dice_string("3 + 1d1 * 2");
         assert_eq!(value, 5);
     }
 
     #[test]
     fn test_math_4() {
-
         let value = parce_dice_string("(3 + 1d1) * 2");
         assert_eq!(value, 8);
     }
