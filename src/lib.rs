@@ -225,7 +225,7 @@ pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &H
 
     let mut table = Table::new();
 
-    table.add_row(row!["Roll", "#Rolls", "Roll%"]);
+    table.set_titles(row!["Roll", "#Rolls", "Roll%"]);
 
     for tuple in tuples {
         let percent = format!("{:.2}%", roll_percentages[&tuple[0]] * 100f64);
