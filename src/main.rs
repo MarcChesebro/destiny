@@ -1,7 +1,11 @@
-#[macro_use] extern crate prettytable;
+use dice_string_parser::DiceDistrubution;
 
 fn main() {
-    let table = ptable!(["ABC", "DEFG", "HIJKLMN"],
-                        ["foobar", "bar", "foo"],
-                        ["foobar2", "bar2", "foo2"]);
+    // let roll_numbers = possible_rolls("2d6");
+    // let distribution = roll_distribution(roll_numbers);
+    // let roll_percentages = roll_percentage(&distribution);
+    // distribution_table(distribution, roll_percentages);
+
+    let dd = DiceDistrubution::new("5d10 + 50");
+    dd.ptable();
 }

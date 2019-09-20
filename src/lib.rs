@@ -1,5 +1,9 @@
 extern crate meval;
 extern crate regex;
+use prettytable::{Table, Row, Cell};
+
+#[macro_use] extern crate prettytable;
+
 use rand::Rng;
 use regex::Captures;
 use regex::Regex;
@@ -58,6 +62,38 @@ impl RollInfo {
     }
 }
 
+pub struct DiceDistrubution {
+    dice_string: String,
+    possible_rolls: Vec<i64>,
+    distribution: HashMap<i64, i64>,
+    roll_percentages: HashMap<i64, f64>,
+    // roll_under: HashMap<i64, f64>,
+    // roll_over: HashMap<i64, f64>
+}
+
+impl DiceDistrubution {
+
+    pub fn new(dice_string: &str) -> DiceDistrubution {
+        let dice_string = String::from(dice_string);
+        let possible_rolls = possible_rolls(&dice_string);
+        let distribution = roll_distribution(&possible_rolls);
+        let roll_percentages = roll_percentage(&distribution);
+
+        DiceDistrubution{
+            dice_string,
+            possible_rolls,
+            distribution,
+            roll_percentages
+        }
+
+    }
+
+    pub fn ptable(&self) {
+        distribution_table(&self.distribution, &self.roll_percentages);
+    }
+}
+
+
 fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
     // TODO remove duplicate regex definition
     let mut roll_infos = Vec::new();
@@ -88,23 +124,50 @@ pub fn possible_rolls(string: &str) -> Vec<i64> {
     roll_numbers
 }
 
-pub fn roll_distribution(roll_numbers: Vec<i64>) -> HashMap<i64, i64> {
+pub fn roll_distribution(roll_numbers: &Vec<i64>) -> HashMap<i64, i64> {
     let mut roll_distribution = HashMap::new();
     for roll in roll_numbers {
-        roll_distribution.entry(roll).and_modify(|e| *e += 1).or_insert(1);
+        roll_distribution.entry(*roll).and_modify(|e| *e += 1).or_insert(1);
     }
 
     roll_distribution
 }
 
-pub fn distribution_table(distribution: HashMap<i64, i64>) -> String {
+pub fn roll_percentage(distribution: &HashMap<i64, i64>) -> HashMap<i64, f64> {
+
+    let total_rolls: i64 = distribution.values().sum();
+    let mut roll_percentages = HashMap::new();
+
+    for (roll, num_rolled) in distribution {
+        roll_percentages.insert(*roll, *num_rolled as f64 / total_rolls as f64);
+    }
+
+    roll_percentages
+}
+
+pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &HashMap<i64, f64>) {//-> String {
     
     let mut tuples = Vec::new();
 
     for (roll, num_rolled) in distribution {
-        tuples.push((roll, num_rolled));
+        tuples.push([roll, num_rolled]);
     }
-    tuples.sort_by(|a, b| a.0.cmp(&b.0));
+    tuples.sort_by(|a, b| a[0].cmp(&b[0]));
+    
+    let mut table = Table::new();
+
+    table.add_row(row!["Roll", "#Rolls", "Roll%"]);
+
+    for tuple in tuples {
+
+        let percent = format!("{:.2}%", roll_percentages[&tuple[0]] * 100f64);
+        table.add_row(Row::new(vec![
+            Cell::new(&tuple[0].to_string()),
+            Cell::new(&tuple[1].to_string()),
+            Cell::new(&percent)
+        ]));
+    }
+    table.printstd();
 }
 
 fn format_dice_string(dice_string: &str, rolls: Vec<i64>) -> String {
