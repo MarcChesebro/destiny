@@ -1,15 +1,19 @@
+//! This is a crate for dice rolling utilities.
+
 extern crate meval;
 extern crate regex;
-use prettytable::{Table, Row, Cell};
+use prettytable::{Cell, Row, Table};
 
-#[macro_use] extern crate prettytable;
+#[macro_use]
+extern crate prettytable;
 
+use itertools::Itertools;
 use rand::Rng;
 use regex::Captures;
 use regex::Regex;
-use itertools::Itertools;
 use std::collections::HashMap;
 
+/// Simulates the rolling of num_dice of size size_dice.
 fn roll_dice(num_dice: usize, size_dice: usize) -> usize {
     let mut rng = rand::thread_rng();
 
@@ -21,6 +25,7 @@ fn roll_dice(num_dice: usize, size_dice: usize) -> usize {
     total
 }
 
+/// Takes a string with dice notation and replaces them with a simulated roll.
 fn replace_dice(string: &str) -> String {
     let re = Regex::new(r"(?P<num_dice>[0-9]+)d(?P<size_dice>[0-9]+)").unwrap();
     let result = re.replace_all(string, |caps: &Captures| {
@@ -35,7 +40,30 @@ fn replace_dice(string: &str) -> String {
     format!("{}", result)
 }
 
-pub fn parce_dice_string(string: &str) -> i64 {
+/// Parses and evaluates Strings with dice notation.
+///
+/// # Examples
+/// ```
+/// use dice_string_parser::parse_dice_string;
+///
+/// let roll = parse_dice_string("1d6");
+/// assert!(roll >= 1 && roll <= 6);
+/// ```
+///
+/// ```
+/// use dice_string_parser::parse_dice_string;
+///
+/// let roll = parse_dice_string("1d6 + 3");
+/// assert!(roll >= 4 && roll <= 9);
+/// ```
+///
+/// ```
+/// use dice_string_parser::parse_dice_string;
+///
+/// let roll = parse_dice_string("2d6");
+/// assert!(roll >= 2 && roll <= 12);
+/// ```
+pub fn parse_dice_string(string: &str) -> i64 {
     let result = meval::eval_str(replace_dice(string)).unwrap();
     result.trunc() as i64
 }
@@ -47,7 +75,6 @@ struct RollInfo {
 
 impl RollInfo {
     pub fn roll_values(&self) -> Vec<i64> {
-        //-> MultiProduct<std::ops::Range<i64>> {
         let mut ranges = Vec::new();
         for _ in 0..self.num {
             ranges.push(1..(self.size + 1));
@@ -63,29 +90,27 @@ impl RollInfo {
 }
 
 pub struct DiceDistrubution {
-    dice_string: String,
-    possible_rolls: Vec<i64>,
-    distribution: HashMap<i64, i64>,
-    roll_percentages: HashMap<i64, f64>,
+    pub dice_string: String,
+    pub possible_rolls: Vec<i64>,
+    pub distribution: HashMap<i64, i64>,
+    pub roll_percentages: HashMap<i64, f64>,
     // roll_under: HashMap<i64, f64>,
     // roll_over: HashMap<i64, f64>
 }
 
 impl DiceDistrubution {
-
     pub fn new(dice_string: &str) -> DiceDistrubution {
         let dice_string = String::from(dice_string);
         let possible_rolls = possible_rolls(&dice_string);
         let distribution = roll_distribution(&possible_rolls);
         let roll_percentages = roll_percentage(&distribution);
 
-        DiceDistrubution{
+        DiceDistrubution {
             dice_string,
             possible_rolls,
             distribution,
-            roll_percentages
+            roll_percentages,
         }
-
     }
 
     pub fn ptable(&self) {
@@ -93,7 +118,7 @@ impl DiceDistrubution {
     }
 }
 
-
+/// Replaces all the dice notions in a string with a '{}' placeholder and creates a Vector of coresponding RollInfo structs
 fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
     // TODO remove duplicate regex definition
     let mut roll_infos = Vec::new();
@@ -112,29 +137,72 @@ fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
     (result, roll_infos)
 }
 
+/// Calculates all the possible roll combinations for a given dice string.
+///
+/// # Examples
+///
+/// Calculate the possibilities of rolling 1d6:
+/// ```
+/// use dice_string_parser::possible_rolls;
+///
+/// let rolls = possible_rolls("1d6");
+/// assert_eq!(vec![1, 2, 3, 4, 5, 6], rolls);
+/// ```
+///
+/// Calulate the possible rolls of 1d4 + 2:
+/// ```
+/// use dice_string_parser::possible_rolls;
+///
+/// let rolls = possible_rolls("1d4 + 2");
+/// assert_eq!(vec![3, 4, 5, 6], rolls);
+/// ```
+///
+/// Calculating the possibilities of 2d4:
+/// ```
+/// use dice_string_parser::possible_rolls;
+///
+/// let rolls = possible_rolls("2d4");
+/// assert_eq!(vec![2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8], rolls);
+/// ```
 pub fn possible_rolls(string: &str) -> Vec<i64> {
     let (format_string, roll_infos) = extract_dice_values(string);
     let roll_numbers: Vec<i64> = roll_infos
         .iter()
         .map(|x| x.roll_values())
         .multi_cartesian_product()
-        .map(|x| parce_dice_string(&format_dice_string(&format_string, x)))
+        .map(|x| parse_dice_string(&format_dice_string(&format_string, x)))
         .collect();
 
     roll_numbers
 }
 
+/// Calculates how many times each roll could have rolled to show the distribution.
+///
+/// A hashmapp is returned with the key being the number rolled and the value being the amount it was rolled.
+///
+/// # Examples
+/// ```
+/// use dice_string_parser::{ possible_rolls, roll_distribution };
+///
+/// let rolls = possible_rolls("2d6");
+/// let distrubution = roll_distribution(&rolls);
+///
+/// // There is only one way to roll 2 on 2d6(Two 1's).
+/// assert_eq!(1, distrubution[&2]);
 pub fn roll_distribution(roll_numbers: &Vec<i64>) -> HashMap<i64, i64> {
     let mut roll_distribution = HashMap::new();
     for roll in roll_numbers {
-        roll_distribution.entry(*roll).and_modify(|e| *e += 1).or_insert(1);
+        roll_distribution
+            .entry(*roll)
+            .and_modify(|e| *e += 1)
+            .or_insert(1);
     }
 
     roll_distribution
 }
 
+/// Takes a distribution and calculates the chance to roll every value
 pub fn roll_percentage(distribution: &HashMap<i64, i64>) -> HashMap<i64, f64> {
-
     let total_rolls: i64 = distribution.values().sum();
     let mut roll_percentages = HashMap::new();
 
@@ -145,26 +213,26 @@ pub fn roll_percentage(distribution: &HashMap<i64, i64>) -> HashMap<i64, f64> {
     roll_percentages
 }
 
-pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &HashMap<i64, f64>) {//-> String {
-    
+pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &HashMap<i64, f64>) {
+    //-> String {
+
     let mut tuples = Vec::new();
 
     for (roll, num_rolled) in distribution {
         tuples.push([roll, num_rolled]);
     }
     tuples.sort_by(|a, b| a[0].cmp(&b[0]));
-    
+
     let mut table = Table::new();
 
     table.add_row(row!["Roll", "#Rolls", "Roll%"]);
 
     for tuple in tuples {
-
         let percent = format!("{:.2}%", roll_percentages[&tuple[0]] * 100f64);
         table.add_row(Row::new(vec![
             Cell::new(&tuple[0].to_string()),
             Cell::new(&tuple[1].to_string()),
-            Cell::new(&percent)
+            Cell::new(&percent),
         ]));
     }
     table.printstd();
@@ -175,7 +243,9 @@ fn format_dice_string(dice_string: &str, rolls: Vec<i64>) -> String {
     let mut new_string = dice_string.to_string();
 
     for roll in rolls {
-        new_string = re.replace(new_string.as_str(), roll.to_string().as_str()).to_string();
+        new_string = re
+            .replace(new_string.as_str(), roll.to_string().as_str())
+            .to_string();
     }
     new_string
 }
@@ -185,46 +255,40 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parce_dice_string() {
-        
+    fn test_parse_dice_string() {
         for _ in 0..100 {
-            let value = parce_dice_string("1d6");
+            let value = parse_dice_string("1d6");
             assert!(value > 0 && value < 7);
         }
     }
 
     #[test]
     fn test_math() {
-
-        let value = parce_dice_string("1d1+2");
+        let value = parse_dice_string("1d1+2");
         assert_eq!(value, 3);
     }
 
     #[test]
     fn test_math_1() {
-
-        let value = parce_dice_string("1d1 + 2");
+        let value = parse_dice_string("1d1 + 2");
         assert_eq!(value, 3);
     }
 
     #[test]
     fn test_math_2() {
-
-        let value = parce_dice_string("1d1 - 1d1 + 2");
+        let value = parse_dice_string("1d1 - 1d1 + 2");
         assert_eq!(value, 2);
     }
 
     #[test]
     fn test_math_3() {
-
-        let value = parce_dice_string("3 + 1d1 * 2");
+        let value = parse_dice_string("3 + 1d1 * 2");
         assert_eq!(value, 5);
     }
 
     #[test]
     fn test_math_4() {
-
-        let value = parce_dice_string("(3 + 1d1) * 2");
+        let value = parse_dice_string("(3 + 1d1) * 2");
         assert_eq!(value, 8);
     }
 }
