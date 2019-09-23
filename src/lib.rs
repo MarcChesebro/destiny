@@ -13,6 +13,10 @@ use regex::Captures;
 use regex::Regex;
 use std::collections::HashMap;
 
+extern crate rayon;
+
+use rayon::prelude::*;
+
 /// Simulates the rolling of num_dice of size size_dice.
 fn roll_dice(num_dice: usize, size_dice: usize) -> usize {
     let mut rng = rand::thread_rng();
@@ -170,6 +174,8 @@ pub fn possible_rolls(string: &str) -> Vec<i64> {
         .iter()
         .map(|x| x.roll_values())
         .multi_cartesian_product()
+        .collect::<Vec<Vec<i64>>>()
+        .par_iter()
         .map(|x| parse_dice_string(&format_dice_string(&format_string, x)))
         .collect();
 
@@ -238,7 +244,7 @@ pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &H
     table.printstd();
 }
 
-fn format_dice_string(dice_string: &str, rolls: Vec<i64>) -> String {
+fn format_dice_string(dice_string: &str, rolls: &Vec<i64>) -> String {
     let re = Regex::new(r"\{}").unwrap();
     let mut new_string = dice_string.to_string();
 
