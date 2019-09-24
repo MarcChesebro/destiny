@@ -391,6 +391,18 @@ mod tests {
     }
 
     #[test]
+    fn test_less_whitespace() {
+        let value = parse_dice_string("(3+1d1)*2");
+        assert_eq!(value, 8);
+    }
+
+    #[test]
+    fn test_more_whitespace() {
+        let value = parse_dice_string("  (   3 + 1d1 ) *2 ");
+        assert_eq!(value, 8);
+    }
+
+    #[test]
     fn test_complexity_1() {
         assert_eq!(roll_complexity("2d6"), 36);
     }
@@ -408,5 +420,17 @@ mod tests {
     #[test]
     fn test_complexity_4() {
         assert_eq!(roll_complexity("8d10"), 100_000_000);
+    }
+
+    #[test]
+    fn test_distribution_1() {
+        let dd = DiceDistribution::new("1d4");
+        assert_eq!(dd.possible_rolls, vec![1, 2, 3, 4]);
+    }
+
+    #[test]
+    fn test_distribution_2() {
+        let dd = DiceDistribution::new("2d4");
+        assert_eq!(dd.possible_rolls, vec![2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8]);
     }
 }
