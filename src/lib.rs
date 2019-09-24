@@ -119,7 +119,7 @@ pub fn parse_dice_string(string: &str) -> i64 {
     result.trunc() as i64
 }
 
-struct RollInfo {
+pub struct RollInfo {
     pub num: i64,
     pub size: i64,
 }
@@ -137,6 +137,10 @@ impl RollInfo {
         }
 
         roll_values
+    }
+
+    pub fn num_possible_rolls(&self) -> i64 {
+        self.size.pow(self.num as u32)
     }
 }
 
@@ -185,6 +189,29 @@ impl DiceDistribution {
     pub fn ptable(&self) {
         &self.table().printstd();
     }
+}
+
+/// Calculates the complexity of a roll. This counts the total number of possible 
+/// dice combinations. This is usefull if you want to make sure a dice roll is 
+/// resonable to calculate before trying it. The best use case for this is if you
+/// are taking user input. if a user tries to calculate the distribution of 
+/// "8d10" the there are 100,000,000 possible dice rolls. Calculating a distribution
+/// on this would take a very long time.
+/// 
+/// # Examples
+/// ```
+/// use destiny::roll_complexity;
+/// 
+/// let num_possibilities = roll_complexity("8d10");
+/// assert_eq!(num_possibilities, 100_000_000)
+/// ```
+pub fn roll_complexity(dice_string: &str) -> i64 {
+
+    let (_, roll_infos) = extract_dice_values(dice_string);
+
+    roll_infos.iter()
+    .map(|x| x.num_possible_rolls())
+    .product()
 }
 
 /// Replaces all the dice notions in a string with a '{}' placeholder and creates a Vector of coresponding RollInfo structs
@@ -361,5 +388,25 @@ mod tests {
     fn test_math_4() {
         let value = parse_dice_string("(3 + 1d1) * 2");
         assert_eq!(value, 8);
+    }
+
+    #[test]
+    fn test_complexity_1() {
+        assert_eq!(roll_complexity("2d6"), 36);
+    }
+
+    #[test]
+    fn test_complexity_2() {
+        assert_eq!(roll_complexity("2d6 + 2d6"), 1296);
+    }
+
+    #[test]
+    fn test_complexity_3() {
+        assert_eq!(roll_complexity("1d20 + 3d6"), 4320);
+    }
+
+    #[test]
+    fn test_complexity_4() {
+        assert_eq!(roll_complexity("8d10"), 100_000_000);
     }
 }
