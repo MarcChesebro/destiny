@@ -351,7 +351,7 @@ fn roll_over_percentage(roll_percentages: &HashMap<i64, f64>) -> HashMap<i64, f6
             }
         }
     }
-    
+
     roll_over
 }
 
@@ -465,11 +465,5 @@ mod tests {
     fn test_distribution_2() {
         let dd = DiceDistribution::new("2d4");
         assert_eq!(dd.possible_rolls, vec![2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8]);
-    }
-
-    #[test]
-    fn table_test() {
-        let dd = DiceDistribution::new("2d6");
-        dd.ptable();
     }
 }
