@@ -159,8 +159,9 @@ pub struct DiceDistribution {
     pub possible_rolls: Vec<i64>,
     pub distribution: HashMap<i64, i64>,
     pub roll_percentages: HashMap<i64, f64>,
-    // roll_under: HashMap<i64, f64>,
-    // roll_over: HashMap<i64, f64>
+    pub roll_over: HashMap<i64, f64>,
+    pub roll_under: HashMap<i64, f64>,
+
 }
 
 impl DiceDistribution {
@@ -171,18 +172,48 @@ impl DiceDistribution {
         let possible_rolls = possible_rolls(&dice_string);
         let distribution = roll_distribution(&possible_rolls);
         let roll_percentages = roll_percentage(&distribution);
+        let roll_over = roll_over_percentage(&roll_percentages);
+        let roll_under = roll_under_percentage(&roll_percentages);
 
         DiceDistribution {
             dice_string,
             possible_rolls,
             distribution,
             roll_percentages,
+            roll_over,
+            roll_under
         }
     }
 
     /// Creates a prettytable::Table containing a representation of self.
     pub fn table(&self) -> Table {
-        distribution_table(&self.distribution, &self.roll_percentages)
+        // distribution_table(&self.distribution, &self.roll_percentages)
+        let mut tuples = Vec::new();
+
+        for (roll, num_rolled) in &self.distribution {
+            tuples.push([roll, num_rolled]);
+        }
+        tuples.sort_by(|a, b| a[0].cmp(&b[0]));
+
+        let mut table = Table::new();
+
+        table.set_titles(row!["Roll", "#Rolls", "Roll%", "Roll>=%", "Roll<%"]);
+
+        for tuple in tuples {
+            let percent = format!("{:.2}%", self.roll_percentages[&tuple[0]] * 100f64);
+            let over_percent = format!("{:.2}%", self.roll_over[&tuple[0]] * 100f64);
+            let under_percent = format!("{:.2}%", self.roll_under[&tuple[0]] * 100f64);
+            
+            table.add_row(Row::new(vec![
+                Cell::new(&tuple[0].to_string()),
+                Cell::new(&tuple[1].to_string()),
+                Cell::new(&percent),
+                Cell::new(&over_percent),
+                Cell::new(&under_percent)
+            ]));
+        }
+        
+        table
     }
 
     /// Creates and prints to stdout a table representation of self.
@@ -311,29 +342,31 @@ pub fn roll_percentage(distribution: &HashMap<i64, i64>) -> HashMap<i64, f64> {
     roll_percentages
 }
 
-fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &HashMap<i64, f64>) -> Table {
-
-    let mut tuples = Vec::new();
-
-    for (roll, num_rolled) in distribution {
-        tuples.push([roll, num_rolled]);
-    }
-    tuples.sort_by(|a, b| a[0].cmp(&b[0]));
-
-    let mut table = Table::new();
-
-    table.set_titles(row!["Roll", "#Rolls", "Roll%"]);
-
-    for tuple in tuples {
-        let percent = format!("{:.2}%", roll_percentages[&tuple[0]] * 100f64);
-        table.add_row(Row::new(vec![
-            Cell::new(&tuple[0].to_string()),
-            Cell::new(&tuple[1].to_string()),
-            Cell::new(&percent),
-        ]));
+fn roll_over_percentage(roll_percentages: &HashMap<i64, f64>) -> HashMap<i64, f64> {
+    let mut roll_over = HashMap::new();
+    for roll in roll_percentages.keys() {
+        for (proll, percentage) in roll_percentages {
+            if proll >= roll {
+                roll_over.entry(*roll).and_modify(|e| *e += percentage).or_insert(*percentage);
+            }
+        }
     }
     
-    table
+    roll_over
+}
+
+fn roll_under_percentage(roll_percentages: &HashMap<i64, f64>) -> HashMap<i64, f64> {
+    let mut roll_under = HashMap::new();
+    for roll in roll_percentages.keys() {
+        roll_under.insert(*roll, 0f64);
+        for (proll, percentage) in roll_percentages {
+            if proll < roll {
+                roll_under.entry(*roll).and_modify(|e| *e += percentage).or_insert(*percentage);
+            }
+        }
+    }
+
+    roll_under
 }
 
 fn format_dice_string(dice_string: &str, rolls: &Vec<i64>) -> String {
@@ -432,5 +465,11 @@ mod tests {
     fn test_distribution_2() {
         let dd = DiceDistribution::new("2d4");
         assert_eq!(dd.possible_rolls, vec![2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8]);
+    }
+
+    #[test]
+    fn table_test() {
+        let dd = DiceDistribution::new("2d6");
+        dd.ptable();
     }
 }
