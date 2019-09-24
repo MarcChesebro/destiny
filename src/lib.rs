@@ -1,4 +1,51 @@
 //! This is a crate for dice rolling utilities.
+//! 
+//! # Examples
+//! Roll some dice using destiny::parse_dice_string:
+//! ```
+//! use destiny::parse_dice_string;
+//!
+//! println!("{}", parse_dice_string("1d4"));
+//! println!("{}", parse_dice_string("1d6"));
+//! println!("{}", parse_dice_string("2d6"));
+//! println!("{}", parse_dice_string("1d8 + 3"));
+//! println!("{}", parse_dice_string("1d6 + 2d8"));
+//! ```
+//! 
+//! Calculate distributions using destiny::DiceDistribution:
+//! ```
+//! use destiny::DiceDistribution;
+//! 
+//! let dd = DiceDistribution::new("2d6");
+//! dd.ptable();
+//! /* this will output:
+//! +------+--------+--------+
+//! | Roll | #Rolls | Roll%  |
+//! +======+========+========+
+//! | 2    | 1      | 2.78%  |
+//! +------+--------+--------+
+//! | 3    | 2      | 5.56%  |
+//! +------+--------+--------+
+//! | 4    | 3      | 8.33%  |
+//! +------+--------+--------+
+//! | 5    | 4      | 11.11% |
+//! +------+--------+--------+
+//! | 6    | 5      | 13.89% |
+//! +------+--------+--------+
+//! | 7    | 6      | 16.67% |
+//! +------+--------+--------+
+//! | 8    | 5      | 13.89% |
+//! +------+--------+--------+
+//! | 9    | 4      | 11.11% |
+//! +------+--------+--------+
+//! | 10   | 3      | 8.33%  |
+//! +------+--------+--------+
+//! | 11   | 2      | 5.56%  |
+//! +------+--------+--------+
+//! | 12   | 1      | 2.78%  |
+//! +------+--------+--------+
+//! */
+//! ```
 
 extern crate meval;
 extern crate regex;
@@ -48,21 +95,21 @@ fn replace_dice(string: &str) -> String {
 ///
 /// # Examples
 /// ```
-/// use dice_string_parser::parse_dice_string;
+/// use destiny::parse_dice_string;
 ///
 /// let roll = parse_dice_string("1d6");
 /// assert!(roll >= 1 && roll <= 6);
 /// ```
 ///
 /// ```
-/// use dice_string_parser::parse_dice_string;
+/// use destiny::parse_dice_string;
 ///
 /// let roll = parse_dice_string("1d6 + 3");
 /// assert!(roll >= 4 && roll <= 9);
 /// ```
 ///
 /// ```
-/// use dice_string_parser::parse_dice_string;
+/// use destiny::parse_dice_string;
 ///
 /// let roll = parse_dice_string("2d6");
 /// assert!(roll >= 2 && roll <= 12);
@@ -93,7 +140,17 @@ impl RollInfo {
     }
 }
 
-pub struct DiceDistrubution {
+/// A struct used to hold the information about a dice distribution.
+/// 
+/// # Examples
+/// ```
+/// use destiny::DiceDistribution;
+/// 
+/// let dd = DiceDistribution::new("1d4");
+/// 
+/// assert_eq!(vec![1, 2, 3, 4], dd.possible_rolls);
+/// ```
+pub struct DiceDistribution {
     pub dice_string: String,
     pub possible_rolls: Vec<i64>,
     pub distribution: HashMap<i64, i64>,
@@ -102,14 +159,16 @@ pub struct DiceDistrubution {
     // roll_over: HashMap<i64, f64>
 }
 
-impl DiceDistrubution {
-    pub fn new(dice_string: &str) -> DiceDistrubution {
+impl DiceDistribution {
+    /// Creates a new DiceDistribution. This uses the supplied string to calculate the
+    /// possible rolls, the distrribution of those rolls and the percentage chance to roll any particular value.
+    pub fn new(dice_string: &str) -> DiceDistribution {
         let dice_string = String::from(dice_string);
         let possible_rolls = possible_rolls(&dice_string);
         let distribution = roll_distribution(&possible_rolls);
         let roll_percentages = roll_percentage(&distribution);
 
-        DiceDistrubution {
+        DiceDistribution {
             dice_string,
             possible_rolls,
             distribution,
@@ -117,8 +176,14 @@ impl DiceDistrubution {
         }
     }
 
+    /// Creates a prettytable::Table containing a representation of self.
+    pub fn table(&self) -> Table {
+        distribution_table(&self.distribution, &self.roll_percentages)
+    }
+
+    /// Creates and prints to stdout a table representation of self.
     pub fn ptable(&self) {
-        distribution_table(&self.distribution, &self.roll_percentages);
+        &self.table().printstd();
     }
 }
 
@@ -147,7 +212,7 @@ fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
 ///
 /// Calculate the possibilities of rolling 1d6:
 /// ```
-/// use dice_string_parser::possible_rolls;
+/// use destiny::possible_rolls;
 ///
 /// let rolls = possible_rolls("1d6");
 /// assert_eq!(vec![1, 2, 3, 4, 5, 6], rolls);
@@ -155,7 +220,7 @@ fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
 ///
 /// Calulate the possible rolls of 1d4 + 2:
 /// ```
-/// use dice_string_parser::possible_rolls;
+/// use destiny::possible_rolls;
 ///
 /// let rolls = possible_rolls("1d4 + 2");
 /// assert_eq!(vec![3, 4, 5, 6], rolls);
@@ -163,7 +228,7 @@ fn extract_dice_values(string: &str) -> (String, Vec<RollInfo>) {
 ///
 /// Calculating the possibilities of 2d4:
 /// ```
-/// use dice_string_parser::possible_rolls;
+/// use destiny::possible_rolls;
 ///
 /// let rolls = possible_rolls("2d4");
 /// assert_eq!(vec![2, 3, 4, 5, 3, 4, 5, 6, 4, 5, 6, 7, 5, 6, 7, 8], rolls);
@@ -188,13 +253,13 @@ pub fn possible_rolls(string: &str) -> Vec<i64> {
 ///
 /// # Examples
 /// ```
-/// use dice_string_parser::{ possible_rolls, roll_distribution };
+/// use destiny::{ possible_rolls, roll_distribution };
 ///
 /// let rolls = possible_rolls("2d6");
-/// let distrubution = roll_distribution(&rolls);
+/// let distribution = roll_distribution(&rolls);
 ///
 /// // There is only one way to roll 2 on 2d6(Two 1's).
-/// assert_eq!(1, distrubution[&2]);
+/// assert_eq!(1, distribution[&2]);
 pub fn roll_distribution(roll_numbers: &Vec<i64>) -> HashMap<i64, i64> {
     let mut roll_distribution = HashMap::new();
     for roll in roll_numbers {
@@ -219,8 +284,7 @@ pub fn roll_percentage(distribution: &HashMap<i64, i64>) -> HashMap<i64, f64> {
     roll_percentages
 }
 
-pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &HashMap<i64, f64>) {
-    //-> String {
+fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &HashMap<i64, f64>) -> Table {
 
     let mut tuples = Vec::new();
 
@@ -241,7 +305,8 @@ pub fn distribution_table(distribution: &HashMap<i64, i64>, roll_percentages: &H
             Cell::new(&percent),
         ]));
     }
-    table.printstd();
+    
+    table
 }
 
 fn format_dice_string(dice_string: &str, rolls: &Vec<i64>) -> String {
