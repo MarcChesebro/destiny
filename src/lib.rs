@@ -119,7 +119,7 @@ pub fn parse_dice_string(string: &str) -> i64 {
     result.trunc() as i64
 }
 
-pub struct RollInfo {
+struct RollInfo {
     pub num: i64,
     pub size: i64,
 }
