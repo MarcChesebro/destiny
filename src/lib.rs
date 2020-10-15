@@ -437,6 +437,56 @@ mod tests {
     }
 
     #[test]
+    fn test_bad_string_1() -> Result<(), String> {
+        let value = parse_dice_string("1d4 + asdf");
+
+        match value {
+            Ok(_) => Err(String::from("dice string '1d4 + asdf' should have returned an error but did not")),
+            Err(_) => Ok(())
+        }
+    }
+
+    #[test]
+    fn test_bad_string_2() -> Result<(), String> {
+        let value = parse_dice_string("1da4 + 3");
+
+        match value {
+            Ok(_) => Err(String::from("dice string '1da4 + 3' should have returned an error but did not")),
+            Err(_) => Ok(())
+        }
+    }
+
+    #[test]
+    fn test_bad_string_3() -> Result<(), String> {
+        let value = parse_dice_string("1d4 + 1d");
+
+        match value {
+            Ok(_) => Err(String::from("dice string '1d4 + 1d' should have returned an error but did not")),
+            Err(_) => Ok(())
+        }
+    }
+
+    #[test]
+    fn test_bad_string_4() -> Result<(), String> {
+        let value = parse_dice_string("1d4 + d6");
+
+        match value {
+            Ok(_) => Err(String::from("dice string '1d4 + d6' should have returned an error but did not")),
+            Err(_) => Ok(())
+        }
+    }
+
+    #[test]
+    fn test_bad_string_6() -> Result<(), String> {
+        let value = parse_dice_string("(1d4 + 1d6");
+
+        match value {
+            Ok(_) => Err(String::from("dice string '(1d4 + 1d6' should have returned an error but did not")),
+            Err(_) => Ok(())
+        }
+    }
+
+    #[test]
     fn test_complexity_1() {
         assert_eq!(roll_complexity("2d6"), 36);
     }
