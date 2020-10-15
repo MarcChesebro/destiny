@@ -5,11 +5,11 @@
 //! ```
 //! use destiny::parse_dice_string;
 //!
-//! println!("{}", parse_dice_string("1d4"));
-//! println!("{}", parse_dice_string("1d6"));
-//! println!("{}", parse_dice_string("2d6"));
-//! println!("{}", parse_dice_string("1d8 + 3"));
-//! println!("{}", parse_dice_string("1d6 + 2d8"));
+//! println!("{}", parse_dice_string("1d4").unwrap());
+//! println!("{}", parse_dice_string("1d6").unwrap());
+//! println!("{}", parse_dice_string("2d6").unwrap());
+//! println!("{}", parse_dice_string("1d8 + 3").unwrap());
+//! println!("{}", parse_dice_string("1d6 + 2d8").unwrap());
 //! ```
 //! 
 //! Calculate distributions using destiny::DiceDistribution:
@@ -97,26 +97,26 @@ fn replace_dice(string: &str) -> String {
 /// ```
 /// use destiny::parse_dice_string;
 ///
-/// let roll = parse_dice_string("1d6");
+/// let roll = parse_dice_string("1d6").unwrap();
 /// assert!(roll >= 1 && roll <= 6);
 /// ```
 ///
 /// ```
 /// use destiny::parse_dice_string;
 ///
-/// let roll = parse_dice_string("1d6 + 3");
+/// let roll = parse_dice_string("1d6 + 3").unwrap();
 /// assert!(roll >= 4 && roll <= 9);
 /// ```
 ///
 /// ```
 /// use destiny::parse_dice_string;
 ///
-/// let roll = parse_dice_string("2d6");
+/// let roll = parse_dice_string("2d6").unwrap();
 /// assert!(roll >= 2 && roll <= 12);
 /// ```
-pub fn parse_dice_string(string: &str) -> i64 {
-    let result = meval::eval_str(replace_dice(string)).unwrap();
-    result.trunc() as i64
+pub fn parse_dice_string(string: &str) -> Result<i64, meval::Error> {
+    let result = meval::eval_str(replace_dice(string))?;
+    Ok(result as i64)
 }
 
 struct RollInfo {
@@ -300,6 +300,7 @@ pub fn possible_rolls(string: &str) -> Vec<i64> {
         .collect::<Vec<Vec<i64>>>()
         .par_iter()
         .map(|x| parse_dice_string(&format_dice_string(&format_string, x)))
+        .filter_map(Result::ok)
         .collect();
 
     roll_numbers
@@ -388,50 +389,50 @@ mod tests {
     #[test]
     fn test_parse_dice_string() {
         for _ in 0..100 {
-            let value = parse_dice_string("1d6");
+            let value = parse_dice_string("1d6").unwrap();
             assert!(value > 0 && value < 7);
         }
     }
 
     #[test]
     fn test_math() {
-        let value = parse_dice_string("1d1+2");
+        let value = parse_dice_string("1d1+2").unwrap();
         assert_eq!(value, 3);
     }
 
     #[test]
     fn test_math_1() {
-        let value = parse_dice_string("1d1 + 2");
+        let value = parse_dice_string("1d1 + 2").unwrap();
         assert_eq!(value, 3);
     }
 
     #[test]
     fn test_math_2() {
-        let value = parse_dice_string("1d1 - 1d1 + 2");
+        let value = parse_dice_string("1d1 - 1d1 + 2").unwrap();
         assert_eq!(value, 2);
     }
 
     #[test]
     fn test_math_3() {
-        let value = parse_dice_string("3 + 1d1 * 2");
+        let value = parse_dice_string("3 + 1d1 * 2").unwrap();
         assert_eq!(value, 5);
     }
 
     #[test]
     fn test_math_4() {
-        let value = parse_dice_string("(3 + 1d1) * 2");
+        let value = parse_dice_string("(3 + 1d1) * 2").unwrap();
         assert_eq!(value, 8);
     }
 
     #[test]
     fn test_less_whitespace() {
-        let value = parse_dice_string("(3+1d1)*2");
+        let value = parse_dice_string("(3+1d1)*2").unwrap();
         assert_eq!(value, 8);
     }
 
     #[test]
     fn test_more_whitespace() {
-        let value = parse_dice_string("  (   3 + 1d1 ) *2 ");
+        let value = parse_dice_string("  (   3 + 1d1 ) *2 ").unwrap();
         assert_eq!(value, 8);
     }
 
