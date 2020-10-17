@@ -47,6 +47,9 @@
 //! */
 //! ```
 
+use std::fmt;
+use std::error;
+
 extern crate meval;
 extern crate regex;
 use prettytable::{Cell, Row, Table};
@@ -63,6 +66,34 @@ use std::collections::HashMap;
 extern crate rayon;
 
 use rayon::prelude::*;
+
+/// Error produced during dice string parsing
+#[derive(Debug)]
+pub enum DestinyError {
+    DiceParse(meval::Error),
+}
+
+impl fmt::Display for DestinyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            DestinyError::DiceParse(ref e) => e.fmt(f),
+        }
+    }
+}
+
+impl error::Error for DestinyError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match *self {
+            DestinyError::DiceParse(ref e) => Some(e),
+        }
+    }
+}
+
+impl From<meval::Error> for DestinyError {
+    fn from(err: meval::Error) -> DestinyError {
+        DestinyError::DiceParse(err)
+    }
+}
 
 /// Simulates the rolling of num_dice of size size_dice.
 fn roll_dice(num_dice: usize, size_dice: usize) -> usize {
@@ -114,7 +145,7 @@ fn replace_dice(string: &str) -> String {
 /// let roll = parse_dice_string("2d6").unwrap();
 /// assert!(roll >= 2 && roll <= 12);
 /// ```
-pub fn parse_dice_string(string: &str) -> Result<i64, meval::Error> {
+pub fn parse_dice_string(string: &str) -> Result<i64, DestinyError> {
     let result = meval::eval_str(replace_dice(string))?;
     Ok(result as i64)
 }
